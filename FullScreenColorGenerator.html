@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagina Colore Interattiva</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+      background-color: rgb(0, 0, 0);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+<script>
+  let currentColor = getRandomColor();
+  document.body.style.backgroundColor = currentColor;
+  let randomColorInterval = null;
+  let intervalSpeed = 100; // Default speed (0.1 second)
+
+  // Funzione per generare un colore casuale
+  function getRandomColor() {
+    return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+  }
+
+  // Funzione per cambiare la frequenza di generazione del colore casuale
+  function changeIntervalSpeed(speed) {
+    intervalSpeed = speed;
+    if (randomColorInterval) {
+      clearInterval(randomColorInterval);
+      randomColorInterval = setInterval(() => {
+        currentColor = getRandomColor();
+        updateColor(currentColor);
+      }, intervalSpeed);
+    }
+  }
+
+  // Funzione per avviare o fermare la variazione casuale del colore
+  function toggleRandomColorChange() {
+    if (randomColorInterval) {
+      clearInterval(randomColorInterval);
+      randomColorInterval = null;
+    } else {
+      randomColorInterval = setInterval(() => {
+        currentColor = getRandomColor();
+        updateColor(currentColor);
+      }, intervalSpeed);
+    }
+  }
+
+  // Funzione per aggiornare il colore
+  function updateColor(color) {
+    currentColor = color;
+    document.body.style.backgroundColor = color;
+    window.history.replaceState(null, null, `#${color.slice(1)}`);
+  }
+
+  // Rilevamento degli eventi sulla tastiera
+  document.addEventListener('keydown', (event) => {
+    switch (event.key.toUpperCase()) {
+      case 'B': updateColor('#000000'); break;
+      case 'W': updateColor('#ffffff'); break;
+      case 'R': updateColor('#C51E3A'); break;
+      case 'G': updateColor('#00ff00'); break;
+      case 'L': updateColor('#00BFFF'); break;
+      case 'Y': updateColor('#FDEE00'); break;
+      case 'O': updateColor('#FF4F00'); break;
+      case 'P': updateColor('#8F00FF'); break;
+      case 'M': updateColor('#FF00FF'); break;
+      case 'C': updateColor('#00FFFF'); break;
+      case 'ARROWUP': adjustBrightness(15); break;
+      case 'ARROWDOWN': adjustBrightness(-15); break;
+      case 'ARROWLEFT': adjustSaturation(-0.1); break;
+      case 'ARROWRIGHT': adjustSaturation(0.1); break;
+      case 'F': toggleFullScreen(); return;
+      case ' ': toggleRandomColorChange(); return; // Usa "barra spaziatrice" per variazione di colore
+      case '1': changeIntervalSpeed(1000); break; // Frequenza 1 secondo
+      case '2': changeIntervalSpeed(100); break;  // Frequenza 0.1 secondi
+      case '3': changeIntervalSpeed(10); break;   // Frequenza 0.01 secondi
+    }
+
+    // Copia/Incolla con Ctrl+C e Ctrl+V
+    if (event.ctrlKey && event.key.toUpperCase() === 'C') {
+      navigator.clipboard.writeText(currentColor).catch(err => {
+        console.error("Errore nell'accesso agli appunti", err);
+      });
+    }
+    if (event.ctrlKey && event.key.toUpperCase() === 'V') {
+      pasteFromClipboard();
+    }
+
+    // Interrompe la variazione di colore quando vengono premuti i tasti specificati
+    if (randomColorInterval && ['B', 'W', 'R', 'G', 'L', 'Y', 'O', 'P', 'M', 'C', 'ARROWUP', 'ARROWDOWN', 'ARROWLEFT', 'ARROWRIGHT', ' '].includes(event.key.toUpperCase())) {
+      clearInterval(randomColorInterval);
+      randomColorInterval = null;
+    }
+  });
+
+  async function pasteFromClipboard() {
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      if (/^#[0-9A-F]{6}$/i.test(clipboardText)) {
+        updateColor(clipboardText);
+      }
+    } catch (err) {
+      console.error("Errore nell'accesso agli appunti", err);
+    }
+  }
+
+  // Funzione per modificare la luminosità del colore
+  function adjustBrightness(amount) {
+    let color = hexToRgb(currentColor);
+    color.r = Math.min(255, Math.max(0, color.r + amount));
+    color.g = Math.min(255, Math.max(0, color.g + amount));
+    color.b = Math.min(255, Math.max(0, color.b + amount));
+    updateColor(rgbToHex(color));
+  }
+
+  // Funzione per modificare la saturazione del colore
+  function adjustSaturation(amount) {
+    let hsl = rgbToHsl(hexToRgb(currentColor));
+    hsl.s = Math.min(1, Math.max(0, hsl.s + amount));
+    updateColor(hslToHex(hsl));
+  }
+
+  // Funzione per entrare/uscire dalla modalità schermo intero
+  function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  // Conversione colore da HEX a RGB
+  function hexToRgb(hex) {
+    const bigint = parseInt(hex.slice(1), 16);
+    return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+  }
+
+  // Conversione colore da RGB a HEX
+  function rgbToHex({ r, g, b }) {
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+  }
+
+  // Conversione colore da RGB a HSL
+  function rgbToHsl({ r, g, b }) {
+    r /= 255, g /= 255, b /= 255;
+    let max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if (max == min) h = s = 0;
+    else {
+      let d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h /= 6;
+    }
+    return { h, s, l };
+  }
+
+  // Conversione colore da HSL a HEX
+  function hslToHex({ h, s, l }) {
+    const hue2rgb = (p, q, t) => t < 0 ? p + (q - p) * 6 * (t + 1) : t > 1 ? p + (q - p) * 6 * (t - 1) : t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p;
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    const [r, g, b] = [hue2rgb(p, q, h + 1 / 3), hue2rgb(p, q, h), hue2rgb(p, q, h - 1 / 3)].map(x => Math.round(x * 255));
+    return rgbToHex({ r, g, b });
+  }
+
+  updateColor(currentColor);
+</script>
+</body>
+</html>
